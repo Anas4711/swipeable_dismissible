@@ -174,7 +174,7 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
   SwipeDirection _getEffectiveDirection(BuildContext context) {
     if (widget.direction != null) return widget.direction!;
     final isRtl = Directionality.of(context) == TextDirection.rtl;
-    return isRtl ? SwipeDirection.startToEnd : SwipeDirection.endToStart;
+    return isRtl ? SwipeDirection.endToStart : SwipeDirection.endToStart;
   }
 
   SwipeDismissableAction get _dismissAction {
@@ -208,9 +208,7 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
 
   void _onHorizontalDragStart(DragStartDetails details) {
     if (_isDismissing) return;
-    setState(() {
-      _isDragging = true;
-    });
+    _isDragging = true;
     widget.onSwipeStart?.call();
   }
 
@@ -242,10 +240,7 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
   void _onHorizontalDragEnd(DragEndDetails details, double totalWidth) {
     if (_isDismissing) return;
 
-    setState(() {
-      _isDragging = false;
-    });
-
+    _isDragging = false;
     widget.onSwipeEnd?.call();
 
     final triggerThreshold = totalWidth * widget.dismissThresholdRatio;
@@ -475,19 +470,16 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
                   ),
                 ),
               ),
-              _isDragging
-                  ? Transform.translate(
-                      offset: Offset(_dragOffset, 0),
-                      child: _buildGestureChild(totalWidth, effectiveDirection),
-                    )
-                  : AnimatedContainer(
-                      duration: _isDismissing
+              AnimatedContainer(
+                duration: _isDragging
+                    ? Duration.zero
+                    : (_isDismissing
                           ? const Duration(milliseconds: 150)
-                          : widget.animationDuration,
-                      curve: widget.animationCurve,
-                      transform: Matrix4.translationValues(_dragOffset, 0, 0),
-                      child: _buildGestureChild(totalWidth, effectiveDirection),
-                    ),
+                          : widget.animationDuration),
+                curve: widget.animationCurve,
+                transform: Matrix4.translationValues(_dragOffset, 0, 0),
+                child: _buildGestureChild(totalWidth, effectiveDirection),
+              ),
             ],
           );
         },
