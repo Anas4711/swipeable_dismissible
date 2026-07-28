@@ -1,3 +1,7 @@
+## 0.0.4
+
+* **Fix**: Fixed initial gesture response latency by unifying gesture tree state on the first drag.
+
 ## 0.0.3
 
 * **Feat**: Added automatic `Directionality` support (RTL / LTR) when `direction` is left `null`.

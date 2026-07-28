@@ -9,7 +9,7 @@
 </p>
 
 
-A fluid, highly customizable, and **1:1 touch-responsive** swipe-to-dismiss widget for Flutter. It supports multiple action layouts, dynamic over-swipe expansion, smooth fading transitions, and fully custom action widgets.
+A fluid, highly customizable, and **1:1 touch-responsive** swipe-to-dismiss widget **built purely with native Flutter widgets (zero external dependencies)**. It supports multiple action layouts, dynamic over-swipe expansion, smooth fading transitions, ambient Directionality (RTL/LTR) support, and fully custom action widgets.
 
 ---
 
@@ -32,7 +32,7 @@ Add the package to your **pubspec.yaml**:
 
 ```yaml
 dependencies:
-  swipeable_dismissible: ^0.0.3
+  swipeable_dismissible: ^0.0.4
 ```
 
 Then run:
