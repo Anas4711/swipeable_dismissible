@@ -47,8 +47,8 @@ class _HistoryPageState extends State<HistoryPage> {
 
           return SwipeDismissible(
             key: ValueKey(item),
-            borderRadius: BorderRadius.circular(50.0), // حواف دائرية للأزرار
-            spacing: 8.0, // مسافة بين الأزرار
+            borderRadius: BorderRadius.circular(50.0),
+            spacing: 8.0, //Space between the action buttons and the main child
             actionGap: 12.0,
             actions: [
               /// Archive action button
@@ -101,7 +101,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 },
               ),
             ],
-            // العنصر الرئيسي بدون زوايا وبدون حواف ومتصل مباشرة
+            // The main child widget that will be swiped to reveal the actions
             child: Material(
               color: Theme.of(context).colorScheme.surface,
               shape: const RoundedRectangleBorder(

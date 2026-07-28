@@ -27,7 +27,7 @@ Add the package to your **pubspec.yaml**:
 
 ```yaml
 dependencies:
-  swipeable_dismissible: ^0.0.1
+  swipeable_dismissible: ^0.0.2
 ```
 
 Then run:
@@ -44,54 +44,61 @@ flutter pub get
 import 'package:flutter/material.dart';
 import 'package:swipeable_dismissible/swipeable_dismissible.dart';
 
-SwipeDismissible(
-  key: const ValueKey('item_1'),
-  borderRadius: BorderRadius.circular(50),
-  spacing: 8,
-  actionGap: 12,
+class ExampleApp extends StatelessWidget {
+  const ExampleApp({super.key});
 
-  onSwipeStart: () {
-    print('Started swiping');
-  },
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: SwipeDismissible(
+          key: const ValueKey('item_1'),
+          borderRadius: BorderRadius.circular(50),
+          spacing: 8,
+          actionGap: 12,
+          onSwipeStart: () {
+            print('Started swiping');
+          },
+          actions: [
+            SwipeDismissableAction(
+              icon: const Icon(Icons.archive),
+              backgroundColor: Colors.blue,
+              width: 50,
+              height: 50,
+              borderRadius: BorderRadius.circular(25),
+              onPressed: () {},
+            ),
+            SwipeDismissableAction(
+              icon: const Icon(Icons.star),
+              backgroundColor: Colors.amber,
+              width: 50,
+              height: 50,
+              borderRadius: BorderRadius.circular(25),
+              onPressed: () {},
+            ),
+            SwipeDismissableAction(
+              icon: const Icon(Icons.delete),
+              label: 'Delete',
+              backgroundColor: Colors.red,
+              width: 70,
+              height: 50,
+              borderRadius: BorderRadius.circular(50),
+              isDismissAction: true,
+              onPressed: () {
+                // Handle delete operation
+              },
+            ),
+          ],
+          child: const ListTile(
+            title: Text('Swipeable Item'),
+            subtitle: Text('Swipe left to reveal actions'),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-  actions: [
-    SwipeDismissableAction(
-      icon: const Icon(Icons.archive),
-      backgroundColor: Colors.blue,
-      width: 50,
-      height: 50,
-      borderRadius: BorderRadius.circular(25),
-      onPressed: () {},
-    ),
-
-    SwipeDismissableAction(
-      icon: const Icon(Icons.star),
-      backgroundColor: Colors.amber,
-      width: 50,
-      height: 50,
-      borderRadius: BorderRadius.circular(25),
-      onPressed: () {},
-    ),
-
-    SwipeDismissableAction(
-      icon: const Icon(Icons.delete),
-      label: 'Delete',
-      backgroundColor: Colors.red,
-      width: 70,
-      height: 50,
-      borderRadius: BorderRadius.circular(50),
-      isDismissAction: true,
-      onPressed: () {
-        // Handle delete operation
-      },
-    ),
-  ],
-
-  child: const ListTile(
-    title: Text('Swipeable Item'),
-    subtitle: Text('Swipe left to reveal actions'),
-  ),
-);
 ```
 
 ---
