@@ -1,4 +1,8 @@
 # Swipeable Dismissible
+[![pub package](https://img.shields.io/pub/v/swipeable_dismissible.svg)](https://pub.dev/packages/swipeable_dismissible)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Anas4711/swipeable_dismissible/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/Anas4711/swipeable_dismissible?style=social)](https://github.com/Anas4711/swipeable_dismissible)
+
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Anas4711/swipeable_dismissible/main/media/preview.png" alt="Swipeable Dismissible Banner" width="100%">
@@ -13,6 +17,7 @@ A fluid, highly customizable, and **1:1 touch-responsive** swipe-to-dismiss widg
 
 - ⚡ **1:1 Touch Response** — Instant fluid drag tracking with zero perceived latency.
 - 🎨 **Fully Customizable Actions** — Customize width, height, colors, border radius, elevation, and shadow colors.
+- 🌐 **Automatic RTL / LTR Support** — Seamlessly adapts to ambient `Directionality` and text layout out of the box.
 - 🧩 **Custom Content Support** — Display any widget inside an action using `customContent`.
 - 📐 **Multiple Action Layouts** — Arrange actions in either a horizontal row or a grid.
 - 🎯 **Dynamic Expansion** — Automatically expands the primary dismiss action during over-swipe while smoothly fading secondary actions.
@@ -27,7 +32,7 @@ Add the package to your **pubspec.yaml**:
 
 ```yaml
 dependencies:
-  swipeable_dismissible: ^0.0.2
+  swipeable_dismissible: ^0.0.3
 ```
 
 Then run:
@@ -91,7 +96,7 @@ class ExampleApp extends StatelessWidget {
           ],
           child: const ListTile(
             title: Text('Swipeable Item'),
-            subtitle: Text('Swipe left to reveal actions'),
+            subtitle: Text('Swipe to reveal actions'),
           ),
         ),
       ),
@@ -112,7 +117,7 @@ class ExampleApp extends StatelessWidget {
 | `child` | `Widget` | **Required** | Main widget displayed in the foreground (e.g. `ListTile`, `Card`). |
 | `actions` | `List<SwipeDismissableAction>` | **Required** | List of action buttons displayed behind the child. |
 | `layout` | `SwipeActionLayout` | `SwipeActionLayout.row` | Layout arrangement for actions (`row` or `grid`). |
-| `direction` | `SwipeDirection` | `SwipeDirection.endToStart` | Allowed swipe direction (`endToStart`, `startToEnd`, `both`). |
+| `direction` | `SwipeDirection?` | `null` | Allowed swipe direction (`endToStart`, `startToEnd`, `both`). Automatically adapts to ambient `Directionality` (RTL/LTR) if left `null`. |
 | `spacing` | `double` | `8.0` | Space between action buttons. |
 | `actionGap` | `double` | `12.0` | Gap between the child and the action container. |
 | `borderRadius` | `BorderRadiusGeometry?` | `null` | Default border radius applied to actions. |
@@ -124,6 +129,7 @@ class ExampleApp extends StatelessWidget {
 | `onSwipeStart` | `VoidCallback?` | `null` | Called when dragging begins. |
 | `onSwipeUpdate` | `ValueChanged<double>?` | `null` | Reports the current drag offset in pixels. |
 | `onSwipeEnd` | `VoidCallback?` | `null` | Called when dragging ends. |
+
 
 ---
 
@@ -150,4 +156,4 @@ class ExampleApp extends StatelessWidget {
 
 ## 📄 License
 
-This project is licensed under the **MIT License**. See the **LICENSE** file for more information.
+This project is licensed under the **MIT License** — see the [LICENSE](https://github.com/Anas4711/swipeable_dismissible/blob/main/LICENSE) file for details.

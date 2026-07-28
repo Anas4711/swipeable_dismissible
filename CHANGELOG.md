@@ -1,3 +1,8 @@
+## 0.0.3
+
+* **Feat**: Added automatic `Directionality` support (RTL / LTR) when `direction` is left `null`.
+* **Refactor**: Updated code documentation and example app to support ambient layout direction.
+
 ## 0.0.2
 
 * Updated README usage example.

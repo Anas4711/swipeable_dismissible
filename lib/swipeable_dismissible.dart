@@ -83,8 +83,8 @@ class SwipeDismissible extends StatefulWidget {
   /// Action layout structure (Row or Grid). Defaults to [SwipeActionLayout.row].
   final SwipeActionLayout layout;
 
-  /// Drag direction allowed. Defaults to [SwipeDirection.endToStart].
-  final SwipeDirection direction;
+  /// Drag direction allowed. If left null, it automatically adapts to RTL / LTR layout.
+  final SwipeDirection? direction;
 
   /// Spacing between action buttons. Defaults to 8.0.
   final double spacing;
@@ -124,7 +124,7 @@ class SwipeDismissible extends StatefulWidget {
     required this.child,
     required this.actions,
     this.layout = SwipeActionLayout.row,
-    this.direction = SwipeDirection.endToStart,
+    this.direction,
     this.spacing = 8.0,
     this.actionGap = 12.0,
     this.borderRadius,
@@ -170,6 +170,13 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
     super.dispose();
   }
 
+  /// Calculates the effective swipe direction based on developer input or current ambient locale directionality.
+  SwipeDirection _getEffectiveDirection(BuildContext context) {
+    if (widget.direction != null) return widget.direction!;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    return isRtl ? SwipeDirection.startToEnd : SwipeDirection.endToStart;
+  }
+
   SwipeDismissableAction get _dismissAction {
     return widget.actions.firstWhere(
       (a) => a.isDismissAction,
@@ -207,7 +214,11 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
     widget.onSwipeStart?.call();
   }
 
-  void _onHorizontalDragUpdate(DragUpdateDetails details, double totalWidth) {
+  void _onHorizontalDragUpdate(
+    DragUpdateDetails details,
+    double totalWidth,
+    SwipeDirection effectiveDirection,
+  ) {
     if (widget.actions.isEmpty || _isDismissing) return;
 
     final delta = details.primaryDelta ?? 0.0;
@@ -215,9 +226,10 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
     setState(() {
       _dragOffset += delta;
 
-      if (widget.direction == SwipeDirection.endToStart) {
+      // Enforce directional drag boundaries
+      if (effectiveDirection == SwipeDirection.endToStart) {
         _dragOffset = _dragOffset.clamp(-totalWidth, 0.0);
-      } else if (widget.direction == SwipeDirection.startToEnd) {
+      } else if (effectiveDirection == SwipeDirection.startToEnd) {
         _dragOffset = _dragOffset.clamp(0.0, totalWidth);
       } else {
         _dragOffset = _dragOffset.clamp(-totalWidth, totalWidth);
@@ -441,6 +453,8 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
 
   @override
   Widget build(BuildContext context) {
+    final effectiveDirection = _getEffectiveDirection(context);
+
     return SizeTransition(
       sizeFactor: Tween<double>(begin: 1.0, end: 0.0).animate(_sizeAnimation),
       child: LayoutBuilder(
@@ -464,7 +478,7 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
               _isDragging
                   ? Transform.translate(
                       offset: Offset(_dragOffset, 0),
-                      child: _buildGestureChild(totalWidth),
+                      child: _buildGestureChild(totalWidth, effectiveDirection),
                     )
                   : AnimatedContainer(
                       duration: _isDismissing
@@ -472,7 +486,7 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
                           : widget.animationDuration,
                       curve: widget.animationCurve,
                       transform: Matrix4.translationValues(_dragOffset, 0, 0),
-                      child: _buildGestureChild(totalWidth),
+                      child: _buildGestureChild(totalWidth, effectiveDirection),
                     ),
             ],
           );
@@ -481,11 +495,14 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
     );
   }
 
-  Widget _buildGestureChild(double totalWidth) {
+  Widget _buildGestureChild(
+    double totalWidth,
+    SwipeDirection effectiveDirection,
+  ) {
     return GestureDetector(
       onHorizontalDragStart: _onHorizontalDragStart,
       onHorizontalDragUpdate: (details) =>
-          _onHorizontalDragUpdate(details, totalWidth),
+          _onHorizontalDragUpdate(details, totalWidth, effectiveDirection),
       onHorizontalDragEnd: (details) =>
           _onHorizontalDragEnd(details, totalWidth),
       behavior: HitTestBehavior.opaque,
