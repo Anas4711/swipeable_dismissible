@@ -16,7 +16,7 @@ A fluid, highly customizable, and **1:1 touch-responsive** swipe-to-dismiss widg
 ## ✨ Features
 
 - ⚡ **1:1 Touch Response** — Instant fluid drag tracking with zero perceived latency.
-- ↔️ **Dual-Side Actions** — Define separate actions for left and right swipe gestures (`leftActions` & `rightActions`).
+- ↔️ **Dual-Side Actions** — Define separate actions for left and right swipe gestures (`mainActions` & `secondaryActions`).
 - 🎨 **Fully Customizable Actions** — Customize width, height, colors, border radius, elevation, and shadow colors.
 - 🌐 **Automatic RTL / LTR Support** — Intelligently resolves swipe direction from ambient `Directionality` or the native system platform locale.
 - 🧩 **Custom Content Support** — Display any widget inside an action using `customContent`.
@@ -34,7 +34,7 @@ Add the package to your **pubspec.yaml**:
 
 ```yaml
 dependencies:
-  swipeable_dismissible: ^1.0.0
+  swipeable_dismissible: ^1.0.1
 ```
 
 Then run:
@@ -66,8 +66,8 @@ class DualSideExample extends StatelessWidget {
           borderRadius: BorderRadius.circular(50),
           spacing: 8,
           actionGap: 12,
-          // Actions revealed on swiping Left -> Right
-          leftActions: [
+          // Actions revealed on swiping based on language direction. 
+          secondaryActions: [
             SwipeDismissableAction(
               icon: const Icon(Icons.archive),
               backgroundColor: Colors.blue,
@@ -77,8 +77,8 @@ class DualSideExample extends StatelessWidget {
               onPressed: () {},
             ),
           ],
-          // Actions revealed on swiping Right -> Left
-          rightActions: [
+          // Actions revealed on swiping based on language direction. 
+          mainActions: [
             SwipeDismissableAction(
               icon: const Icon(Icons.delete),
               label: 'Delete',
@@ -92,7 +92,7 @@ class DualSideExample extends StatelessWidget {
           ],
           child: const ListTile(
             title: Text('Swipeable Item'),
-            subtitle: Text('Swipe right to archive, left to delete'),
+            subtitle: Text('Swipe to reveal adaptive main and secondary actions'),
           ),
         ),
       ),
@@ -112,9 +112,9 @@ class DualSideExample extends StatelessWidget {
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `child` | `Widget` | **Required** | Main widget displayed in the foreground (e.g. `ListTile`, `Card`). |
-| `actions` | `List<SwipeDismissableAction>?` | `null` | Single action list fallback if `leftActions` / `rightActions` are omitted. |
-| `leftActions` | `List<SwipeDismissableAction>?` | `null` | Action buttons revealed when swiping Left-to-Right. |
-| `rightActions` | `List<SwipeDismissableAction>?` | `null` | Action buttons revealed when swiping Right-to-Left. |
+| `actions` | `List<SwipeDismissableAction>?` | `null` | Single action list fallback if `mainActions` / `secondaryActions` are omitted. |
+| `mainActions` | `List<SwipeDismissableAction>?` | `null` | Primary action buttons revealed on main swipe (Right-to-Left in LTR, Left-to-Right in RTL). |
+| `secondaryActions` | `List<SwipeDismissableAction>?` | `null` | Secondary action buttons revealed on secondary swipe (Left-to-Right in LTR, Right-to-Left in RTL). |
 | `layout` | `SwipeActionLayout` | `SwipeActionLayout.row` | Layout arrangement for actions (`row` or `grid`). |
 | `direction` | `SwipeDirection?` | `null` | Allowed swipe direction (`endToStart`, `startToEnd`, `both`). Automatically adapts to ambient `Directionality` or native system locale (RTL/LTR) if left `null`. |
 | `spacing` | `double` | `8.0` | Space between action buttons. |

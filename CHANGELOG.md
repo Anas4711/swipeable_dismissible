@@ -1,3 +1,8 @@
+## 1.0.1
+
+* **Fix:** Improved dual-side action positioning — `mainActions` and `secondaryActions` now automatically adapt to system language and ambient `Directionality` (RTL / LTR).
+* **Fix:** In LTR (e.g. English), `mainActions` reveal on the right and `secondaryActions` on the left. In RTL (e.g. Arabic), they automatically swap sides seamlessly.
+
 ## 1.0.0
 
 * **Feat:** Added dual-side swipe support with `leftActions` and `rightActions`.

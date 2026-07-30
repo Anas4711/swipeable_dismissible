@@ -77,19 +77,19 @@ class SwipeDismissible extends StatefulWidget {
   /// Main child widget (e.g. Card, ListTile).
   final Widget child;
 
-  /// List of swipe action buttons. Fallback when [leftActions] or [rightActions] are not explicitly provided.
+  /// Fallback list of swipe action buttons when [mainActions] or [secondaryActions] are omitted.
   final List<SwipeDismissableAction>? actions;
 
-  /// Action buttons revealed when swiping from Left to Right (Start to End).
-  final List<SwipeDismissableAction>? leftActions;
+  /// Primary action buttons revealed on main swipe (Right-to-Left in LTR, Left-to-Right in RTL).
+  final List<SwipeDismissableAction>? mainActions;
 
-  /// Action buttons revealed when swiping from Right to Left (End to Start).
-  final List<SwipeDismissableAction>? rightActions;
+  /// Secondary action buttons revealed on secondary swipe (Left-to-Right in LTR, Right-to-Left in RTL).
+  final List<SwipeDismissableAction>? secondaryActions;
 
   /// Action layout structure (Row or Grid). Defaults to [SwipeActionLayout.row].
   final SwipeActionLayout layout;
 
-  /// Drag direction allowed. If left null, it automatically adapts to RTL / LTR layout.
+  /// Explicit drag direction allowed. If left null, it automatically adapts to RTL / LTR layout.
   final SwipeDirection? direction;
 
   /// Spacing between action buttons. Defaults to 8.0.
@@ -129,8 +129,8 @@ class SwipeDismissible extends StatefulWidget {
     super.key,
     required this.child,
     this.actions,
-    this.leftActions,
-    this.rightActions,
+    this.mainActions,
+    this.secondaryActions,
     this.layout = SwipeActionLayout.row,
     this.direction,
     this.spacing = 8.0,
@@ -145,8 +145,8 @@ class SwipeDismissible extends StatefulWidget {
     this.onSwipeUpdate,
     this.onSwipeEnd,
   }) : assert(
-         actions != null || leftActions != null || rightActions != null,
-         'Provide at least actions, leftActions, or rightActions for SwipeDismissible.',
+         actions != null || mainActions != null || secondaryActions != null,
+         'Provide at least actions, mainActions, or secondaryActions for SwipeDismissible.',
        );
 
   @override
@@ -181,49 +181,71 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
     super.dispose();
   }
 
-  /// Calculates the effective swipe direction based on developer input, dual-side actions, or current ambient locale directionality.
+  bool _isRtl(BuildContext context) {
+    final textDirection = Directionality.maybeOf(context);
+    if (textDirection != null) {
+      return textDirection == TextDirection.rtl;
+    }
+    final deviceLocale = View.of(context).platformDispatcher.locale;
+    return deviceLocale.languageCode == 'ar';
+  }
+
+  /// Calculates the effective swipe direction based on developer override or locale adaptiveness.
   SwipeDirection _getEffectiveDirection(BuildContext context) {
     if (widget.direction != null) return widget.direction!;
-    if (widget.leftActions != null && widget.rightActions != null) {
+    if (widget.mainActions != null && widget.secondaryActions != null) {
       return SwipeDirection.both;
     }
 
-    final textDirection = Directionality.maybeOf(context);
-    if (textDirection != null) {
-      return textDirection == TextDirection.rtl
-          ? SwipeDirection.startToEnd
-          : SwipeDirection.endToStart;
+    final isRtl = _isRtl(context);
+    if (widget.mainActions != null) {
+      // mainActions -> RTL: startToEnd (Left-to-Right), LTR: endToStart (Right-to-Left)
+      return isRtl ? SwipeDirection.startToEnd : SwipeDirection.endToStart;
+    } else if (widget.secondaryActions != null) {
+      // secondaryActions -> RTL: endToStart (Right-to-Left), LTR: startToEnd (Left-to-Right)
+      return isRtl ? SwipeDirection.endToStart : SwipeDirection.startToEnd;
     }
 
-    final deviceLocale = View.of(context).platformDispatcher.locale;
-    final isDeviceRtl = deviceLocale.languageCode == 'ar';
-
-    return isDeviceRtl ? SwipeDirection.startToEnd : SwipeDirection.endToStart;
+    return SwipeDirection.endToStart;
   }
 
-  /// Dynamically retrieves active actions based on current drag direction offset.
-  List<SwipeDismissableAction> get _effectiveActions {
-    if (_dragOffset > 0) {
-      return widget.leftActions ?? widget.actions ?? [];
-    } else if (_dragOffset < 0) {
-      return widget.rightActions ?? widget.actions ?? [];
+  /// Dynamically determines active actions array according to direction offset and locale directionality.
+  List<SwipeDismissableAction> _getEffectiveActions(BuildContext context) {
+    final isRtl = _isRtl(context);
+
+    if (_dragOffset < 0) {
+      // Swiping Right-to-Left: reveals actions on the Right
+      // LTR -> mainActions | RTL -> secondaryActions
+      return isRtl
+          ? (widget.secondaryActions ?? widget.actions ?? [])
+          : (widget.mainActions ?? widget.actions ?? []);
+    } else if (_dragOffset > 0) {
+      // Swiping Left-to-Right: reveals actions on the Left
+      // LTR -> secondaryActions | RTL -> mainActions
+      return isRtl
+          ? (widget.mainActions ?? widget.actions ?? [])
+          : (widget.secondaryActions ?? widget.actions ?? []);
     }
-    return widget.actions ?? widget.leftActions ?? widget.rightActions ?? [];
+
+    return widget.mainActions ??
+        widget.secondaryActions ??
+        widget.actions ??
+        [];
   }
 
-  SwipeDismissableAction? get _dismissAction {
-    final currentActions = _effectiveActions;
+  SwipeDismissableAction? _getDismissAction(BuildContext context) {
+    final currentActions = _getEffectiveActions(context);
     final index = currentActions.indexWhere((a) => a.isDismissAction);
     return index != -1 ? currentActions[index] : null;
   }
 
-  int get _dismissActionIndex {
-    final currentActions = _effectiveActions;
+  int _getDismissActionIndex(BuildContext context) {
+    final currentActions = _getEffectiveActions(context);
     return currentActions.indexWhere((a) => a.isDismissAction);
   }
 
-  double get _baseMaxExtent {
-    final currentActions = _effectiveActions;
+  double _getBaseMaxExtent(BuildContext context) {
+    final currentActions = _getEffectiveActions(context);
     if (currentActions.isEmpty) return 0.0;
 
     double total = 0.0;
@@ -256,7 +278,6 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
     setState(() {
       _dragOffset += delta;
 
-      // Enforce directional drag boundaries
       if (effectiveDirection == SwipeDirection.endToStart) {
         _dragOffset = _dragOffset.clamp(-totalWidth, 0.0);
       } else if (effectiveDirection == SwipeDirection.startToEnd) {
@@ -266,7 +287,7 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
       }
     });
 
-    if (_effectiveActions.isEmpty || _isDismissing) return;
+    if (_getEffectiveActions(context).isEmpty || _isDismissing) return;
     widget.onSwipeUpdate?.call(_dragOffset);
   }
 
@@ -276,20 +297,22 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
     _isDragging = false;
     widget.onSwipeEnd?.call();
 
-    if (_effectiveActions.isEmpty) {
+    final currentActions = _getEffectiveActions(context);
+    if (currentActions.isEmpty) {
       _close();
       return;
     }
 
+    final baseMaxExtent = _getBaseMaxExtent(context);
     final triggerThreshold = totalWidth * widget.dismissThresholdRatio;
-    final normalThreshold = _baseMaxExtent * 0.4;
-    final dismiss = _dismissAction;
+    final normalThreshold = baseMaxExtent * 0.4;
+    final dismiss = _getDismissAction(context);
 
     if (_dragOffset.abs() >= triggerThreshold && dismiss != null) {
       _triggerDismiss(dismiss, totalWidth);
     } else if (_dragOffset.abs() >= normalThreshold) {
       setState(() {
-        _dragOffset = _dragOffset < 0 ? -_baseMaxExtent : _baseMaxExtent;
+        _dragOffset = _dragOffset < 0 ? -baseMaxExtent : baseMaxExtent;
       });
     } else {
       _close();
@@ -341,7 +364,7 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () {
-            final dismiss = _dismissAction;
+            final dismiss = _getDismissAction(context);
             if (action.isDismissAction ||
                 (dismiss != null && action == dismiss)) {
               final double width = context.size?.width ?? 300.0;
@@ -391,18 +414,19 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
   }
 
   Widget _buildActionsLayout(double totalWidth) {
-    final currentActions = _effectiveActions;
+    final currentActions = _getEffectiveActions(context);
     if (currentActions.isEmpty) return const SizedBox.shrink();
 
-    final targetDismissIdx = _dismissActionIndex;
+    final targetDismissIdx = _getDismissActionIndex(context);
     final hasDismissAction = targetDismissIdx != -1;
+    final baseMaxExtent = _getBaseMaxExtent(context);
 
     final overScroll = hasDismissAction
-        ? (_dragOffset.abs() - _baseMaxExtent).clamp(0.0, double.infinity)
+        ? (_dragOffset.abs() - baseMaxExtent).clamp(0.0, double.infinity)
         : 0.0;
 
     final fadeRange =
-        (totalWidth * widget.dismissThresholdRatio) - _baseMaxExtent;
+        (totalWidth * widget.dismissThresholdRatio) - baseMaxExtent;
     final progress = (hasDismissAction && fadeRange > 0)
         ? (overScroll / fadeRange).clamp(0.0, 1.0)
         : 0.0;
@@ -420,7 +444,7 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
               final isTargetDismiss = index == targetDismissIdx;
 
               if (isTargetDismiss) {
-                final dismiss = _dismissAction;
+                final dismiss = _getDismissAction(context);
                 final double shrinkSpace =
                     (1.0 - otherActionsOpacity) *
                     (currentActions
@@ -464,7 +488,7 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
       );
     } else {
       return SizedBox(
-        width: _baseMaxExtent - widget.actionGap + overScroll,
+        width: baseMaxExtent - widget.actionGap + overScroll,
         child: GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
