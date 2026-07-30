@@ -9,20 +9,22 @@
 </p>
 
 
-A fluid, highly customizable, and **1:1 touch-responsive** swipe-to-dismiss widget **built purely with native Flutter widgets (zero external dependencies)**. It supports multiple action layouts, dynamic over-swipe expansion, smooth fading transitions, ambient Directionality (RTL/LTR) support, and fully custom action widgets.
+A fluid, highly customizable, and **1:1 touch-responsive** swipe-to-dismiss widget **built purely with native Flutter widgets (zero external dependencies)**. It supports single or dual-side swipe action sets, dynamic over-swipe expansion, smooth fading transitions, ambient Directionality and native system locale (RTL/LTR) support, and fully custom action widgets.
 
 ---
 
 ## ✨ Features
 
 - ⚡ **1:1 Touch Response** — Instant fluid drag tracking with zero perceived latency.
+- ↔️ **Dual-Side Actions** — Define separate actions for left and right swipe gestures (`leftActions` & `rightActions`).
 - 🎨 **Fully Customizable Actions** — Customize width, height, colors, border radius, elevation, and shadow colors.
-- 🌐 **Automatic RTL / LTR Support** — Seamlessly adapts to ambient `Directionality` and text layout out of the box.
+- 🌐 **Automatic RTL / LTR Support** — Intelligently resolves swipe direction from ambient `Directionality` or the native system platform locale.
 - 🧩 **Custom Content Support** — Display any widget inside an action using `customContent`.
 - 📐 **Multiple Action Layouts** — Arrange actions in either a horizontal row or a grid.
-- 🎯 **Dynamic Expansion** — Automatically expands the primary dismiss action during over-swipe while smoothly fading secondary actions.
+- 🎯 **Opt-in Dismiss Expansion** — Full-swipe dismissal and button expansion only trigger when `isDismissAction: true` is set.
 - 🛡️ **Overflow Safe** — Prevents `RenderFlex` overflow during extreme drag gestures.
 - 🔔 **Swipe Callbacks** — Listen to gesture lifecycle events with `onSwipeStart`, `onSwipeUpdate`, and `onSwipeEnd`.
+
 
 ---
 
@@ -32,7 +34,7 @@ Add the package to your **pubspec.yaml**:
 
 ```yaml
 dependencies:
-  swipeable_dismissible: ^0.0.4
+  swipeable_dismissible: ^1.0.0
 ```
 
 Then run:
@@ -45,12 +47,14 @@ flutter pub get
 
 ## 🚀 Usage
 
+### Dual-Side Swiping (Both Directions)
+
 ```dart
 import 'package:flutter/material.dart';
 import 'package:swipeable_dismissible/swipeable_dismissible.dart';
 
-class ExampleApp extends StatelessWidget {
-  const ExampleApp({super.key});
+class DualSideExample extends StatelessWidget {
+  const DualSideExample({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -58,13 +62,12 @@ class ExampleApp extends StatelessWidget {
       body: Center(
         child: SwipeDismissible(
           key: const ValueKey('item_1'),
+          direction: SwipeDirection.both,
           borderRadius: BorderRadius.circular(50),
           spacing: 8,
           actionGap: 12,
-          onSwipeStart: () {
-            print('Started swiping');
-          },
-          actions: [
+          // Actions revealed on swiping Left -> Right
+          leftActions: [
             SwipeDismissableAction(
               icon: const Icon(Icons.archive),
               backgroundColor: Colors.blue,
@@ -73,14 +76,9 @@ class ExampleApp extends StatelessWidget {
               borderRadius: BorderRadius.circular(25),
               onPressed: () {},
             ),
-            SwipeDismissableAction(
-              icon: const Icon(Icons.star),
-              backgroundColor: Colors.amber,
-              width: 50,
-              height: 50,
-              borderRadius: BorderRadius.circular(25),
-              onPressed: () {},
-            ),
+          ],
+          // Actions revealed on swiping Right -> Left
+          rightActions: [
             SwipeDismissableAction(
               icon: const Icon(Icons.delete),
               label: 'Delete',
@@ -88,21 +86,20 @@ class ExampleApp extends StatelessWidget {
               width: 70,
               height: 50,
               borderRadius: BorderRadius.circular(50),
-              isDismissAction: true,
-              onPressed: () {
-                // Handle delete operation
-              },
+              isDismissAction: true, // Enables auto-dismiss on full swipe
+              onPressed: () {},
             ),
           ],
           child: const ListTile(
             title: Text('Swipeable Item'),
-            subtitle: Text('Swipe to reveal actions'),
+            subtitle: Text('Swipe right to archive, left to delete'),
           ),
         ),
       ),
     );
   }
 }
+
 
 ```
 
@@ -115,9 +112,11 @@ class ExampleApp extends StatelessWidget {
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `child` | `Widget` | **Required** | Main widget displayed in the foreground (e.g. `ListTile`, `Card`). |
-| `actions` | `List<SwipeDismissableAction>` | **Required** | List of action buttons displayed behind the child. |
+| `actions` | `List<SwipeDismissableAction>?` | `null` | Single action list fallback if `leftActions` / `rightActions` are omitted. |
+| `leftActions` | `List<SwipeDismissableAction>?` | `null` | Action buttons revealed when swiping Left-to-Right. |
+| `rightActions` | `List<SwipeDismissableAction>?` | `null` | Action buttons revealed when swiping Right-to-Left. |
 | `layout` | `SwipeActionLayout` | `SwipeActionLayout.row` | Layout arrangement for actions (`row` or `grid`). |
-| `direction` | `SwipeDirection?` | `null` | Allowed swipe direction (`endToStart`, `startToEnd`, `both`). Automatically adapts to ambient `Directionality` (RTL/LTR) if left `null`. |
+| `direction` | `SwipeDirection?` | `null` | Allowed swipe direction (`endToStart`, `startToEnd`, `both`). Automatically adapts to ambient `Directionality` or native system locale (RTL/LTR) if left `null`. |
 | `spacing` | `double` | `8.0` | Space between action buttons. |
 | `actionGap` | `double` | `12.0` | Gap between the child and the action container. |
 | `borderRadius` | `BorderRadiusGeometry?` | `null` | Default border radius applied to actions. |
@@ -125,7 +124,7 @@ class ExampleApp extends StatelessWidget {
 | `animationCurve` | `Curve` | `Curves.easeOutCubic` | Animation curve used for transitions. |
 | `gridCrossAxisCount` | `int` | `2` | Number of columns when using grid layout. |
 | `gridChildAspectRatio` | `double` | `1.0` | Child aspect ratio for grid layout. |
-| `dismissThresholdRatio` | `double` | `0.65` | Swipe ratio required to trigger automatic dismissal. |
+| `dismissThresholdRatio` | `double` | `0.65` | Swipe ratio required to trigger automatic dismissal when an action has `isDismissAction: true`. |
 | `onSwipeStart` | `VoidCallback?` | `null` | Called when dragging begins. |
 | `onSwipeUpdate` | `ValueChanged<double>?` | `null` | Reports the current drag offset in pixels. |
 | `onSwipeEnd` | `VoidCallback?` | `null` | Called when dragging ends. |
@@ -149,7 +148,7 @@ class ExampleApp extends StatelessWidget {
 | `shadowColor` | `Color?` | `null` | Shadow color when elevation is greater than zero. |
 | `borderRadius` | `BorderRadiusGeometry?` | `null` | Border radius of the action button. |
 | `padding` | `EdgeInsetsGeometry?` | `null` | Internal padding around the action content. |
-| `isDismissAction` | `bool` | `false` | Expands this action during a full swipe dismissal. |
+| `isDismissAction` | `bool` | `false` | Enables full-swipe expansion and auto-dismiss behavior for this action. |
 | `customContent` | `Widget?` | `null` | Displays a custom widget instead of the default icon/label layout. |
 
 ---

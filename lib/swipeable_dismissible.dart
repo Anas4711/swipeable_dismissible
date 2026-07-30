@@ -77,8 +77,14 @@ class SwipeDismissible extends StatefulWidget {
   /// Main child widget (e.g. Card, ListTile).
   final Widget child;
 
-  /// List of swipe action buttons.
-  final List<SwipeDismissableAction> actions;
+  /// List of swipe action buttons. Fallback when [leftActions] or [rightActions] are not explicitly provided.
+  final List<SwipeDismissableAction>? actions;
+
+  /// Action buttons revealed when swiping from Left to Right (Start to End).
+  final List<SwipeDismissableAction>? leftActions;
+
+  /// Action buttons revealed when swiping from Right to Left (End to Start).
+  final List<SwipeDismissableAction>? rightActions;
 
   /// Action layout structure (Row or Grid). Defaults to [SwipeActionLayout.row].
   final SwipeActionLayout layout;
@@ -122,7 +128,9 @@ class SwipeDismissible extends StatefulWidget {
   const SwipeDismissible({
     super.key,
     required this.child,
-    required this.actions,
+    this.actions,
+    this.leftActions,
+    this.rightActions,
     this.layout = SwipeActionLayout.row,
     this.direction,
     this.spacing = 8.0,
@@ -136,7 +144,10 @@ class SwipeDismissible extends StatefulWidget {
     this.onSwipeStart,
     this.onSwipeUpdate,
     this.onSwipeEnd,
-  });
+  }) : assert(
+         actions != null || leftActions != null || rightActions != null,
+         'Provide at least actions, leftActions, or rightActions for SwipeDismissible.',
+       );
 
   @override
   State<SwipeDismissible> createState() => _SwipeDismissibleState();
@@ -170,36 +181,59 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
     super.dispose();
   }
 
-  /// Calculates the effective swipe direction based on developer input or current ambient locale directionality.
+  /// Calculates the effective swipe direction based on developer input, dual-side actions, or current ambient locale directionality.
   SwipeDirection _getEffectiveDirection(BuildContext context) {
     if (widget.direction != null) return widget.direction!;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-    return isRtl ? SwipeDirection.endToStart : SwipeDirection.endToStart;
+    if (widget.leftActions != null && widget.rightActions != null) {
+      return SwipeDirection.both;
+    }
+
+    final textDirection = Directionality.maybeOf(context);
+    if (textDirection != null) {
+      return textDirection == TextDirection.rtl
+          ? SwipeDirection.startToEnd
+          : SwipeDirection.endToStart;
+    }
+
+    final deviceLocale = View.of(context).platformDispatcher.locale;
+    final isDeviceRtl = deviceLocale.languageCode == 'ar';
+
+    return isDeviceRtl ? SwipeDirection.startToEnd : SwipeDirection.endToStart;
   }
 
-  SwipeDismissableAction get _dismissAction {
-    return widget.actions.firstWhere(
-      (a) => a.isDismissAction,
-      orElse: () => widget.actions.last,
-    );
+  /// Dynamically retrieves active actions based on current drag direction offset.
+  List<SwipeDismissableAction> get _effectiveActions {
+    if (_dragOffset > 0) {
+      return widget.leftActions ?? widget.actions ?? [];
+    } else if (_dragOffset < 0) {
+      return widget.rightActions ?? widget.actions ?? [];
+    }
+    return widget.actions ?? widget.leftActions ?? widget.rightActions ?? [];
+  }
+
+  SwipeDismissableAction? get _dismissAction {
+    final currentActions = _effectiveActions;
+    final index = currentActions.indexWhere((a) => a.isDismissAction);
+    return index != -1 ? currentActions[index] : null;
   }
 
   int get _dismissActionIndex {
-    final index = widget.actions.indexWhere((a) => a.isDismissAction);
-    return index != -1 ? index : widget.actions.length - 1;
+    final currentActions = _effectiveActions;
+    return currentActions.indexWhere((a) => a.isDismissAction);
   }
 
   double get _baseMaxExtent {
-    if (widget.actions.isEmpty) return 0.0;
+    final currentActions = _effectiveActions;
+    if (currentActions.isEmpty) return 0.0;
 
     double total = 0.0;
     if (widget.layout == SwipeActionLayout.row) {
-      for (var action in widget.actions) {
+      for (var action in currentActions) {
         total += (action.width ?? 60.0) + widget.spacing;
       }
     } else {
-      final rows = (widget.actions.length / widget.gridCrossAxisCount).ceil();
-      final itemHeight = widget.actions.first.height ?? 50.0;
+      final rows = (currentActions.length / widget.gridCrossAxisCount).ceil();
+      final itemHeight = currentActions.first.height ?? 50.0;
       total = (rows * itemHeight) + ((rows - 1) * widget.spacing);
     }
 
@@ -217,8 +251,6 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
     double totalWidth,
     SwipeDirection effectiveDirection,
   ) {
-    if (widget.actions.isEmpty || _isDismissing) return;
-
     final delta = details.primaryDelta ?? 0.0;
 
     setState(() {
@@ -234,6 +266,7 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
       }
     });
 
+    if (_effectiveActions.isEmpty || _isDismissing) return;
     widget.onSwipeUpdate?.call(_dragOffset);
   }
 
@@ -243,11 +276,17 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
     _isDragging = false;
     widget.onSwipeEnd?.call();
 
+    if (_effectiveActions.isEmpty) {
+      _close();
+      return;
+    }
+
     final triggerThreshold = totalWidth * widget.dismissThresholdRatio;
     final normalThreshold = _baseMaxExtent * 0.4;
+    final dismiss = _dismissAction;
 
-    if (_dragOffset.abs() >= triggerThreshold) {
-      _triggerDismiss(_dismissAction, totalWidth);
+    if (_dragOffset.abs() >= triggerThreshold && dismiss != null) {
+      _triggerDismiss(dismiss, totalWidth);
     } else if (_dragOffset.abs() >= normalThreshold) {
       setState(() {
         _dragOffset = _dragOffset < 0 ? -_baseMaxExtent : _baseMaxExtent;
@@ -302,7 +341,9 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () {
-            if (action.isDismissAction || action == _dismissAction) {
+            final dismiss = _dismissAction;
+            if (action.isDismissAction ||
+                (dismiss != null && action == dismiss)) {
               final double width = context.size?.width ?? 300.0;
               _triggerDismiss(action, width);
             } else {
@@ -350,19 +391,22 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
   }
 
   Widget _buildActionsLayout(double totalWidth) {
-    final overScroll = (_dragOffset.abs() - _baseMaxExtent).clamp(
-      0.0,
-      double.infinity,
-    );
+    final currentActions = _effectiveActions;
+    if (currentActions.isEmpty) return const SizedBox.shrink();
+
+    final targetDismissIdx = _dismissActionIndex;
+    final hasDismissAction = targetDismissIdx != -1;
+
+    final overScroll = hasDismissAction
+        ? (_dragOffset.abs() - _baseMaxExtent).clamp(0.0, double.infinity)
+        : 0.0;
 
     final fadeRange =
         (totalWidth * widget.dismissThresholdRatio) - _baseMaxExtent;
-    final progress = fadeRange > 0
+    final progress = (hasDismissAction && fadeRange > 0)
         ? (overScroll / fadeRange).clamp(0.0, 1.0)
         : 0.0;
     final otherActionsOpacity = (1.0 - progress).clamp(0.0, 1.0);
-
-    final targetDismissIdx = _dismissActionIndex;
 
     if (widget.layout == SwipeActionLayout.row) {
       return ClipRect(
@@ -371,15 +415,16 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
           physics: const NeverScrollableScrollPhysics(),
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            children: List.generate(widget.actions.length, (index) {
-              final action = widget.actions[index];
+            children: List.generate(currentActions.length, (index) {
+              final action = currentActions[index];
               final isTargetDismiss = index == targetDismissIdx;
 
               if (isTargetDismiss) {
+                final dismiss = _dismissAction;
                 final double shrinkSpace =
                     (1.0 - otherActionsOpacity) *
-                    (widget.actions
-                        .where((a) => !a.isDismissAction && a != _dismissAction)
+                    (currentActions
+                        .where((a) => !a.isDismissAction && a != dismiss)
                         .fold(
                           0.0,
                           (sum, a) => sum + (a.width ?? 60.0) + widget.spacing,
@@ -429,10 +474,10 @@ class _SwipeDismissibleState extends State<SwipeDismissible>
             mainAxisSpacing: widget.spacing,
             childAspectRatio: widget.gridChildAspectRatio,
           ),
-          itemCount: widget.actions.length,
+          itemCount: currentActions.length,
           itemBuilder: (context, index) {
             final isTargetDismiss = index == targetDismissIdx;
-            final buttonWidget = _buildActionButton(widget.actions[index]);
+            final buttonWidget = _buildActionButton(currentActions[index]);
 
             if (isTargetDismiss) return buttonWidget;
             if (otherActionsOpacity <= 0.05 || _isDismissing) {
